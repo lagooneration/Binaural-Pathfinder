@@ -7,8 +7,9 @@
   // World points
   const A = { x: 120, y: 560 };
   const B = { x: 1040, y: 160 };
-  const L = { x: 320, y: 240 }; // left speaker
-  const R = { x: 880, y: 520 }; // right speaker
+  const L0 = { x: 320, y: 240 }; // base left
+  const R0 = { x: 880, y: 520 }; // base right
+  let L = {...L0}, R = {...R0};
 
   function rnd(n=1){ return (Math.random()*n); }
   function lerp(a,b,t){ return a + (b-a)*t; }
@@ -124,7 +125,16 @@
     requestAnimationFrame(tick);
   }
 
-  function reseed(){ create(); }
+  function jitterSpeakers(amount=24){
+    const j = () => (Math.random()*2 - 1) * amount;
+    L = { x: L0.x + j(), y: L0.y + j() };
+    R = { x: R0.x + j(), y: R0.y + j() };
+    // keep them separate
+    const minD = 120;
+    if (dist(L,R) < minD) R.x = L.x + minD;
+  }
+
+  function reseed(){ jitterSpeakers(24); create(); }
   function play(){ create(); }
 
   document.getElementById('btnPlay').addEventListener('click', play);

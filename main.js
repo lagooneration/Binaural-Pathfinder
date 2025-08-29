@@ -28,12 +28,13 @@ function intensityAtPoint(point, speakerPos, power = 1.0) {
 
 // ---------- Scene Setup ----------
 let renderer, scene, camera, controls, container;
-let subjectMesh, speakerL, speakerR, goalMesh, fieldMesh;
+let subjectMesh, speakerL, speakerR, goalMesh, fieldMesh, labelA, labelB;
 let ringsL = [], ringsR = [];
 let population = [];
 let bestPathLine, bestPathHead;
 let gen = 0;
 let rand = seedRandom(12345);
+let TARGET = 'either'; // 'either' | 'left' | 'right'
 
 const WORLD = {
   width: 40,
@@ -74,8 +75,7 @@ function init() {
     controls.dampingFactor = 0.05;
     controls.target.set(0, 0, 0);
   } else {
-    controls = { update(){} };
-    enableBasicDragControls(camera, renderer.domElement);
+    controls = enableBasicDragControls(camera, renderer.domElement);
   }
 
   // Lights
@@ -88,7 +88,7 @@ function init() {
   fieldMesh = createFieldMesh(WORLD, 180, 140);
   scene.add(fieldMesh);
 
-  // Speakers
+  // Speakers (icon sprites)
   speakerL = createSpeaker(0x3b82f6); // blue
   speakerL.position.copy(WORLD.speakerL);
   scene.add(speakerL);
@@ -105,10 +105,16 @@ function init() {
   const Amesh = createMarker(0xffffff);
   Amesh.position.copy(WORLD.A);
   scene.add(Amesh);
+  labelA = createTextSprite('A', '#e6e9ef');
+  labelA.position.copy(WORLD.A).add(new THREE.Vector3(0, 1.4, 0));
+  scene.add(labelA);
 
   goalMesh = createMarker(0x22c55e);
   goalMesh.position.copy(WORLD.B);
   scene.add(goalMesh);
+  labelB = createTextSprite('B', '#22c55e');
+  labelB.position.copy(WORLD.B).add(new THREE.Vector3(0, 1.4, 0));
+  scene.add(labelB);
 
   // Subject (head)
   const headGeo = new THREE.SphereGeometry(0.7, 20, 16);
@@ -128,15 +134,44 @@ function init() {
 
   // Populate initial genomes
   population = makeInitialPopulation();
+  // cache base speaker positions for jitter reference
+  if (!WORLD.baseSpeakerL) { WORLD.baseSpeakerL = WORLD.speakerL.clone(); }
+  if (!WORLD.baseSpeakerR) { WORLD.baseSpeakerR = WORLD.speakerR.clone(); }
   updateHUD();
 
   window.addEventListener('resize', onResize);
   document.getElementById('year').textContent = new Date().getFullYear();
-  document.getElementById('playBtn').addEventListener('click', () => runEvolution(true));
-  document.getElementById('rerunBtn').addEventListener('click', () => runEvolution(false));
-  document.getElementById('restartLink').addEventListener('click', (e) => { e.preventDefault(); runEvolution(false);});
+  document.getElementById('playBtn').addEventListener('click', () => runEvolution(true, TARGET));
+  document.getElementById('rerunBtn').addEventListener('click', () => runEvolution(false, TARGET));
+  document.getElementById('restartLink').addEventListener('click', (e) => { e.preventDefault(); runEvolution(false, TARGET);});
+
+  // Click picking to choose target speaker
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  renderer.domElement.addEventListener('click', (ev) => {
+    const rect = renderer.domElement.getBoundingClientRect();
+    ndc.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
+    ndc.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(ndc, camera);
+    const hits = raycaster.intersectObjects([speakerL, speakerR], true);
+    if (hits.length) {
+      const obj = hits[0].object;
+      if (obj === speakerL || obj.parent === speakerL) {
+        TARGET = 'left';
+        updateHUD();
+        runEvolution(true, 'left');
+      } else if (obj === speakerR || obj.parent === speakerR) {
+        TARGET = 'right';
+        updateHUD();
+        runEvolution(true, 'right');
+      }
+    }
+  });
 
   animate();
+
+  // Ensure A/B and speakers are framed on first load
+  frameImportant();
 }
 
 function onResize() {
@@ -206,15 +241,12 @@ function createFieldMesh(world, nx = 120, nz = 80) {
 
 // ---------- Scene Elements ----------
 function createSpeaker(color) {
-  const g = new THREE.ConeGeometry(0.9, 2.2, 24);
-  const m = new THREE.MeshStandardMaterial({ color, metalness: 0.4, roughness: 0.35 });
-  const cone = new THREE.Mesh(g, m);
-  cone.rotation.x = -Math.PI/2;
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.2, 24), new THREE.MeshStandardMaterial({ color: 0x22283a }));
-  base.position.y = -1.2;
-  const group = new THREE.Group();
-  group.add(cone); group.add(base);
-  return group;
+  const tex = makeIconTexture(color);
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(3.0, 3.0, 1);
+  sprite.position.y = 1.0;
+  return sprite;
 }
 
 function createSpeakerRings(origin, color) {
@@ -236,6 +268,45 @@ function createMarker(color) {
   const m = new THREE.MeshStandardMaterial({ color, emissive: new THREE.Color(color).multiplyScalar(0.1), roughness: 0.6 });
   const mesh = new THREE.Mesh(g, m);
   return mesh;
+}
+
+function createTextSprite(text, color = '#fff') {
+  const canvas = document.createElement('canvas');
+  const size = 256; canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,size,size);
+  ctx.font = 'bold 170px Inter, system-ui, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 18; ctx.strokeText(text, size/2, size/2);
+  ctx.fillStyle = color; ctx.fillText(text, size/2, size/2);
+  const tex = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(2.0, 2.0, 1);
+  return sprite;
+}
+
+function makeIconTexture(color) {
+  const hex = new THREE.Color(color).getHexString();
+  const svg = `<?xml version="1.0"?><svg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'>
+    <defs>
+      <linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>
+        <stop offset='0' stop-color='#20263a'/>
+        <stop offset='1' stop-color='#121624'/>
+      </linearGradient>
+    </defs>
+    <rect x='0' y='0' width='128' height='128' rx='20' fill='url(#g)'/>
+    <g fill='none' stroke='#${hex}' stroke-width='6' stroke-linecap='round'>
+      <polygon points='22,64 52,42 52,86' fill='#${hex}' stroke='#${hex}'/>
+      <path d='M66 46 Q88 64 66 82'/>
+      <path d='M80 34 Q114 64 80 94'/>
+    </g>
+  </svg>`;
+  const url = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+  const loader = new THREE.TextureLoader();
+  const texture = loader.load(url);
+  texture.anisotropy = 4;
+  return texture;
 }
 
 // ---------- Paths and Fitness ----------
@@ -287,7 +358,8 @@ function evaluateFitness(genome) {
     const p = pts[i];
     const Il = intensityAtPoint(p, WORLD.speakerL, 1.0);
     const Ir = intensityAtPoint(p, WORLD.speakerR, 1.0);
-    const loud = Math.max(Il, Ir);
+  let loud;
+  if (TARGET === 'left') loud = Il; else if (TARGET === 'right') loud = Ir; else loud = Math.max(Il, Ir);
     sum += loud;
     if (i>0) len += pts[i-1].distanceTo(p);
   }
@@ -342,11 +414,14 @@ let animT = 0;
 let animPath = [];
 let lastBest = null;
 
-function runEvolution(play = true) {
+function runEvolution(play = true, target = 'either') {
   if (running) return;
   running = true;
   gen = 0;
   rand = seedRandom((Math.random()*1e9)|0);
+  // Add variation: jitter speaker positions only on reseed (not on autoplay)
+  if (!play) jitterSpeakers(2.5);
+  TARGET = target || TARGET;
   population = makeInitialPopulation();
 
   // evaluate initial
@@ -453,6 +528,8 @@ function updateHUD() {
   document.getElementById('genLabel').textContent = String(gen);
   const best = population && population[0] ? population[0].fitness : 0;
   document.getElementById('fitLabel').textContent = best.toFixed(3);
+  const tgt = TARGET === 'left' ? 'Left' : TARGET === 'right' ? 'Right' : 'Either';
+  const el = document.getElementById('targetLabel'); if (el) el.textContent = tgt;
 }
 
 // ---------- Main Animation Loop ----------
@@ -518,4 +595,58 @@ function enableBasicDragControls(cam, dom) {
     theta -= dx * 0.005; phi -= dy * 0.005; updateCam();
   });
   dom.addEventListener('wheel', e=>{ radius += Math.sign(e.deltaY) * 2.0; updateCam(); });
+  return {
+    update: ()=>{},
+    setTargetRadius: (center, r)=>{ target.copy(center); radius = r; updateCam(); }
+  };
+}
+
+// --- Speaker jitter to vary the field on reseed ---
+function jitterSpeakers(amount = 2.5) {
+  // keep around original bases
+  const baseL = WORLD.baseSpeakerL || WORLD.speakerL.clone();
+  const baseR = WORLD.baseSpeakerR || WORLD.speakerR.clone();
+  const j = () => (rand()*2 - 1) * amount;
+  WORLD.speakerL.set(baseL.x + j(), 0, baseL.z + j());
+  WORLD.speakerR.set(baseR.x + j(), 0, baseR.z + j());
+  // keep them separate (min distance)
+  const minDist = 6.0;
+  if (WORLD.speakerL.distanceTo(WORLD.speakerR) < minDist) {
+    // push R away from L along x
+    if (WORLD.speakerR.x <= WORLD.speakerL.x) WORLD.speakerR.x = WORLD.speakerL.x + minDist;
+    else WORLD.speakerR.x = WORLD.speakerL.x - minDist;
+  }
+  // reflect in scene objects
+  speakerL.position.copy(WORLD.speakerL);
+  speakerR.position.copy(WORLD.speakerR);
+  ringsL.forEach(r=>{ r.position.x = WORLD.speakerL.x; r.position.z = WORLD.speakerL.z; });
+  ringsR.forEach(r=>{ r.position.x = WORLD.speakerR.x; r.position.z = WORLD.speakerR.z; });
+  if (fieldMesh && fieldMesh.userData && fieldMesh.userData.uniforms) {
+    // uniforms reference the same vectors, so set() above already updates; ensure render picks it up
+    fieldMesh.userData.uniforms.uSpeakerL.value = WORLD.speakerL;
+    fieldMesh.userData.uniforms.uSpeakerR.value = WORLD.speakerR;
+  }
+  frameImportant();
+}
+
+// Frame camera to include A/B and speakers
+function frameImportant(pad = 1.25) {
+  const pts = [WORLD.A, WORLD.B, WORLD.speakerL, WORLD.speakerR];
+  const box = new THREE.Box3();
+  pts.forEach(p=> box.expandByPoint(p));
+  const center = new THREE.Vector3(); box.getCenter(center);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const radius = 0.5 * Math.max(size.x, size.z) * pad + 6;
+
+  if (controls && controls.target) {
+    const dir = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+    controls.target.copy(center);
+    camera.position.copy(center).add(dir.multiplyScalar(Math.max(radius, 16)));
+  } else if (controls && typeof controls.setTargetRadius === 'function') {
+    controls.setTargetRadius(center, Math.max(radius, 16));
+  } else {
+    camera.position.set(center.x + Math.max(radius, 16), center.y + Math.max(radius*0.6, 10), center.z + Math.max(radius, 16));
+    camera.lookAt(center);
+  }
+  camera.updateProjectionMatrix();
 }
