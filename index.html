@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Binaural Pathfinding — Evolving Paths to Hear</title>
+    <meta name="description" content="Concept project proposal: visualize ML evolution of a subject moving from A→B in 3D with two speakers, optimizing binaural hearing." />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="hero">
+        <div class="hero__content">
+          <h1>Binaural Pathfinding</h1>
+          <p class="tagline">Evolving paths to hear optimally between two speakers while traveling from A to B.</p>
+          <div class="cta">
+            <button id="playBtn" class="btn primary">Play Concept Animation</button>
+            <button id="rerunBtn" class="btn">Re-run Evolution</button>
+          </div>
+          <div class="meta">
+            <span class="pill">Concept Proposal</span>
+            <span class="pill">Interactive 3D</span>
+            <span class="pill">Evolutionary Optimization</span>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="stage">
+          <div id="three-container" class="three"></div>
+          <div class="legend">
+            <div class="legend__row"><span class="swatch swatch--red"></span><span>Right Speaker louder</span></div>
+            <div class="legend__row"><span class="swatch swatch--blue"></span><span>Left Speaker louder</span></div>
+            <div class="legend__row"><span class="swatch swatch--purple"></span><span>Balanced</span></div>
+            <div class="legend__row"><span class="swatch swatch--green"></span><span>Goal (Point B)</span></div>
+          </div>
+          <div class="hud">
+            <div>Generation: <strong id="genLabel">—</strong></div>
+            <div>Best Fitness: <strong id="fitLabel">—</strong></div>
+          </div>
+        </section>
+
+        <section class="content">
+          <div class="card">
+            <h2>Scope of the Research</h2>
+            <ul>
+              <li>Model a listener (subject) moving in a 3D environment from point A to point B.</li>
+              <li>Place two speakers at different positions; simulate binaural intensity fields.</li>
+              <li>Use evolutionary strategies to discover efficient paths that maximize hearing quality while minimizing travel cost.</li>
+              <li>Visualize learning progress across generations and the resulting optimized routes.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h2>Concept Visualization</h2>
+            <p>The ground plane encodes a sound field: red indicates right-speaker dominance, blue indicates left-speaker dominance, and purple indicates balance. The evolving subject explores different vector paths; the best paths are drawn with vertex colors that reflect which ear receives stronger signal along the route. Pulsing rings around speakers convey sound emission.</p>
+          </div>
+          <div class="card">
+            <h2>Method at a Glance</h2>
+            <ol>
+              <li>Represent a path as control points between A and B; interpolate with a smooth curve.</li>
+              <li>Define a fitness that combines average binaural intensity with path efficiency.</li>
+              <li>Evolve a population with selection, crossover, and mutation over multiple generations.</li>
+              <li>Animate top candidates; compare how they leverage the sound field to reach B.</li>
+            </ol>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div class="footer__inner">
+          <span>© <span id="year"></span> Binaural Pathfinding — Concept Study</span>
+          <span class="sep">•</span>
+          <a href="#" id="restartLink">Restart Animation</a>
+          <span class="sep">•</span>
+          <a href="./paths.html">2D Paths (SVG)</a>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Three.js via CDN -->
+    <script src="https://unpkg.com/three@0.159.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.159.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script src="./main.js"></script>
+  </body>
+</html>

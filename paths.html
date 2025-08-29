@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>2D Path Finding — Binaural Concept</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles.css" />
+    <style>
+      body { overflow: hidden; }
+      .wrap { display: grid; grid-template-columns: 1fr 340px; gap: 16px; padding: 16px; max-width: 1400px; margin: 0 auto; }
+      .panel { background: var(--panel); border: 1px solid #1e2438; border-radius: 16px; padding: 12px; height: calc(100vh - 40px); overflow: auto; }
+      .svgHost { background: linear-gradient(180deg, #0f1220, #0a0c14); border-radius: 12px; height: calc(100vh - 40px); border: 1px solid #1e2438; }
+      .hint { color: var(--muted); font-size: 12px; }
+      .badge { display: inline-block; background: #1b1f2b; color: var(--muted); border: 1px solid #23273a; border-radius: 999px; padding: 4px 8px; font-size: 11px; }
+      .list { margin: 10px 0 0; padding-left: 16px; color: var(--muted);} 
+      .btnbar { display: flex; gap: 8px; margin: 8px 0; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="svgHost">
+        <svg id="svg" width="100%" height="100%" viewBox="0 0 1200 720" preserveAspectRatio="xMidYMid slice"></svg>
+      </div>
+      <aside class="panel">
+        <h2>2D Paths — Concept</h2>
+        <p class="hint">A minimal SVG animation that illustrates multiple candidate paths from A to B; the algorithm highlights the best one repeatedly.</p>
+        <div class="btnbar">
+          <button id="btnPlay" class="btn primary">Play / Restart</button>
+          <button id="btnReseed" class="btn">Reseed</button>
+        </div>
+        <p><span class="badge">Outcomes</span></p>
+        <ul class="list">
+          <li>Animated exploration of paths between two points in a field.</li>
+          <li>Highlighting the optimized path based on a simple cost function.</li>
+          <li>Intuitive understanding of pathfinding and trade-offs.</li>
+        </ul>
+        <p><span class="badge">What’s happening</span></p>
+        <ul class="list">
+          <li>Paths are generated and scored using distance and loudness balance.</li>
+          <li>Top path is emphasized; others fade to show comparison.</li>
+          <li>Looping keeps focus on the best solution.</li>
+        </ul>
+        <p class="hint"><a href="./index.html">Back to 3D</a></p>
+      </aside>
+    </div>
+    <script src="./paths.js"></script>
+  </body>
+  </html>
